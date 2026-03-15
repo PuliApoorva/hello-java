@@ -1,48 +1,46 @@
 pipeline {
     agent any
 
-
     stages {
-
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo 'Code already checked out from Git'
+                echo 'Checking out the code...'
+                checkout scm
             }
         }
 
-    stage('Compile Java') {
-        steps {
-            sh '''
-                rm -rf build
-                mkdir build
-                javac -d build src/Hello.java
-                jar cfe hello.jar Hello -C build .
-            '''
-        }
-    }
-
-
-        stage('Prepare Package Directory') {
+        stage('Build') {
             steps {
-                sh '''
-                    mkdir -p package/usr/local/bin
-                    cp hello.jar package/usr/local/bin/
-                '''
+                echo 'Compiling Java files...'
+                // Make sure you have a folder named 'bin' or it will be created automatically
+                sh 'mkdir -p bin'
+                sh 'javac -d bin src/*.java'
             }
         }
 
-        stage('Build DEB using FPM') {
+        stage('Test') {
             steps {
-                sh '''
-                    fpm -s dir -t deb -n hello-java -v 1.0.${BUILD_NUMBER} --prefix=/ -C package
-                '''
+                echo 'Running tests...'
+                // Add test commands here if you have tests
+                // Example: sh 'java -cp bin org.junit.runner.JUnitCore MyTestClass'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                echo 'Packaging (optional)...'
+                // Example: create a jar file
+                sh 'jar cf hello-java.jar -C bin .'
             }
         }
     }
 
     post {
         success {
-            archiveArtifacts artifacts: '*.deb'
+            echo 'Build completed successfully!'
+        }
+        failure {
+            echo 'Build failed. Check console output for details.'
         }
     }
 }
