@@ -12,7 +12,6 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Compiling Java files...'
-                // Make sure you have a folder named 'bin' or it will be created automatically
                 sh 'mkdir -p bin'
                 sh 'javac -d bin src/*.java'
             }
@@ -21,16 +20,32 @@ pipeline {
         stage('Test') {
             steps {
                 echo 'Running tests...'
-                // Add test commands here if you have tests
-                // Example: sh 'java -cp bin org.junit.runner.JUnitCore MyTestClass'
             }
         }
 
         stage('Package') {
             steps {
-                echo 'Packaging (optional)...'
-                // Example: create a jar file
+                echo 'Creating JAR file...'
                 sh 'jar cf hello-java.jar -C bin .'
+            }
+        }
+
+        stage('Prepare Package Directory') {
+            steps {
+                echo 'Preparing package directory for DEB...'
+                sh '''
+                    mkdir -p package/usr/local/bin
+                    cp hello-java.jar package/usr/local/bin/
+                '''
+            }
+        }
+
+        stage('Build DEB using FPM') {
+            steps {
+                echo 'Creating .deb package with FPM...'
+                sh '''
+                    fpm -s dir -t deb -n hello-java -v 1.0.${BUILD_NUMBER} --prefix=/ -C package .
+                '''
             }
         }
     }
@@ -38,6 +53,7 @@ pipeline {
     post {
         success {
             echo 'Build completed successfully!'
+            archiveArtifacts artifacts: '*.deb, *.jar'
         }
         failure {
             echo 'Build failed. Check console output for details.'
